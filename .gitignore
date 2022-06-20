@@ -1,0 +1,14 @@
+# IDE
+/.vscode
+/.idea
+
+# CMake build directory
+build/
+cmake-build-debug/
+
+# files
+.DS_Store
+/ncnn
+/web/realcugan-ncnn-webassembly*
+/web/up2x*
+/web/up3x*

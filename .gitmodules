@@ -1,0 +1,6 @@
+[submodule "ncnn"]
+	path = ncnn
+	url = https://github.com/Tencent/ncnn.git
+[submodule "fmt"]
+	path = fmt
+	url = https://github.com/fmtlib/fmt.git
