@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta charset="utf-8">
+    <meta name="renderer" content="webkit" />
+    <title>动漫图片超分辨率 Real-CUGAN</title>
+    <meta name="force-rendering" content="webkit" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
+    <meta name="description" content="realcugan-ncnn-assembly - 通用动漫图像超分辨率处理">
+    <!-- <script src="vue.js"></script> -->
+    <script>
+        if (location.protocol !== 'https:' && location.href.includes('real-cugan')) {
+            location.replace(`https:${location.href.substring(location.protocol.length)}`);
+        }
+    </script>
+    <script src="vue.min.js"></script>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="normalize.css">
+    <link rel="stylesheet" href="element.css">
+    <!-- import JavaS/docs/doccnToNsFKaK01nwkKpHD5S4xbcript -->
+    <script src="element.js"></script>
+    <script src="wasmFeatureDetect.js"></script>
+</head>
+
+<body>
+    <div id="app"></div>
+</body>
+
+<script type="text/x-template" id="form">
+    <div>
+        <el-container>
+            <el-header>
+                <el-menu :default-active="'1'" class="el-menu-demo" mode="horizontal">
+                    <el-menu-item index="1">动漫图片超分辨率</el-menu-item>
+                    <el-menu-item index="2"><a href="https://github.com/hanFengSan/realcugan-ncnn-webassembly" target="_blank">GitHub</a></el-menu-item>
+                    <el-submenu index="5">
+                        <template slot="title">关于</template>
+                        <el-menu-item index="7"><a href="https://github.com/bilibili/ailab/tree/main/Real-CUGAN"
+                                                   target="_blank">Real-CUGAN</a></el-menu-item>
+                        <el-menu-item index="8"><a href="https://github.com/Tencent/ncnn" target="_blank">ncnn</a>
+                        </el-menu-item>
+                        <el-menu-item index="9"><a href="https://github.com/emscripten-core/emscripten" target="_blank">emscripten</a>
+                        </el-menu-item>
+                    </el-submenu>
+                </el-menu>
+            </el-header>
+
+            <el-main>
+                <el-row type="flex" align="top" justify="center">
+                    <el-col :span="18" :xs="24" class="main-content">
+                        <el-row type="flex" align="top" justify="start">
+                            <div style="display: flex; flex-direction: column;">
+                                <h1 style="text-align: left;">动漫图片超分辨率 Real-CUGAN</h1>
+                                <p style="text-align: left; font-size: 0.9em; line-height: 1.4em;">
+                                    本项目基于Web Assembly技术，<b>在浏览器端使用CPU完成图像处理，</b>不会上传任何图片到云端。<br>
+                                    <b>注意：本页面处理图片时占用内存约1.6G，且CPU占用较高。</b>如果使用有问题，请在PC端使用最新版的Chrome或Firefox打开本页面。如输出有问题或长时间无响应，请刷新重试。<br><br>
+                                    <span style="color: #909399;"><b>超分倍率:</b> 会决定输出图片的尺寸，推荐2X，因为目前3X处理会耗时比较久。受限于加载资源的大小，3X倍率不能调整降噪；<br>
+                                        <b>降噪版:</b> 如果原片噪声多，压得烂，推荐使用；目前2倍模型支持了3个降噪等级；<br>
+                                        <b>无降噪版：</b>如果原片噪声不多，压得还行，但是想提高分辨率/清晰度/做通用性的增强、修复处理，推荐使用；<br>
+                                        <b>保守版: </b>如果你担心丢失纹理，担心画风被改变，担心颜色被增强，总之就是各种担心AI会留下浓重的处理痕迹，推荐使用该版本；但对于较模糊、渣清的视频，修复程度不会比降噪版更好。</span>
+                                </p>
+                            </div>
+                        </el-row>
+                        <el-row type="flex" justify="start" align="middle">
+                            <span class="option-title">超分倍率:</span>
+                            <el-radio-group v-model="scaleRadio" v-on:change="onScaleOptionChange">
+                                <el-radio-button :label="2">2X</el-radio-button>
+                                <el-radio-button :label="3">3X</el-radio-button>
+                            </el-radio-group>
+                        </el-row>
+                        <el-row type="flex" justify="start" align="middle" class="content-block">
+                            <span class="option-title">降噪配置:</span>
+                            <el-radio-group v-model="denoiseRadio" v-on:change="onDenoiseOptionChange">
+                                <el-radio-button :disabled="scaleRadio==3" :label="-1">保守</el-radio-button>
+                                <el-radio-button :disabled="scaleRadio==3" :label="0">无降噪</el-radio-button>
+                                <el-radio-button :label="3">降噪3X</el-radio-button>
+                            </el-radio-group>
+                        </el-row>
+                        <el-row type="flex" justify="start" align="middle" class="content-block">
+                            <span class="option-title">预览模式:</span>
+                            <el-radio-group v-model="previewRadio" v-on:change="onPreviewOptionChange">
+                                <el-radio-button :label="0">叠图</el-radio-button>
+                                <el-radio-button :label="1">并排</el-radio-button>
+                                <el-radio-button :label="2">并列</el-radio-button>
+                            </el-radio-group>
+                        </el-row>
+
+                        <el-row class="content-block" v-show="isProcessing === false">
+                            <el-upload
+                                    style
+                                    drag
+                                    :auto-upload="false"
+                                    accept="image/png,image/jpeg,image/webp,image/bmp"
+                                    :on-change="onUploadChange"
+                                    action="https://jsonplaceholder.typicode.com/posts/">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor"
+                                     class="el-icon-upload" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd"
+                                          d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2z"/>
+                                    <path d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383zm.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z"/>
+                                </svg>
+                                <div class="el-upload__text">将文件拖到此处，或<em>点击选取</em></div>
+                                <div class="el-upload__tip" slot="tip">只能选取jpg/png/webp/bmp文件</div>
+                            </el-upload>
+                        </el-row>
+                        <el-row class="content-block" v-if="isProcessing || isProcessDone">
+                            <span style="font-size: 0.9em;" v-if="isProcessing && !isProcessDone">{{progressTip}}</span>
+                            <span style="font-size: 0.9em; color: #409EFF; margin: 40px"  v-if="!isProcessing && isProcessDone"><b>{{progressTip}}</b></span>
+                            <span style="font-size: 0.9em; margin-left: 20px;" v-if="isProcessing && !isProcessDone && procRemainingTime > 0">剩余时长: <b style="color: #409EFF;">{{procRemainingTime}}秒</b></span>
+                        </el-row>
+                        <el-row>
+                            <div v-if="!wasmModuleLoaded" style="font-size: 0.9em; color: #409EFF; margin-top: 30px"><b>资源努力加载中(约12MB)......</b></div>
+                        </el-row>
+                        <el-row class="content-block" type="flex" align="middle" justify="center" v-if="isProcessing">
+                            <el-progress style="width: 360px;" :text-inside="true" :stroke-width="26"
+                                         :percentage="progressRate"></el-progress>
+                        </el-row>
+                        <el-row v-if="uploadPreviewWidth !== 0 && !isProcessDone" class="content-block">
+                            <el-image
+                                    :preview-src-list="[uploadImgSrc]"
+                                    :src="uploadImgSrc"
+                                    :style="{width: '360px', height: uploadPreviewHeight / uploadPreviewWidth * 360 + 'px'}">
+                            </el-image>
+                            <div style="font-size: 14px; margin-top: 12px; color: rgb(144, 147, 153);">{{uploadPreviewName}}</div>
+                        </el-row>
+                        <el-row class="content-block" v-if="!isProcessing">
+                            <el-button type="plain" round v-on:click="runTestCase">使用示例图片</el-button>
+                        </el-row>
+                        <el-row class="content-block" v-if="isProcessDone">
+                            <el-button type="primary" round v-on:click="saveOutput">保存图片</el-button>
+                        </el-row>
+                        <el-row class="content-block" v-if="isProcessing && !isProcessDone">
+                            <el-button type="plain" round v-on:click="stopProcess">取消处理</el-button>
+                        </el-row>
+                        <el-row style="display: none;">
+                            <canvas id="canvas-upload"></canvas>
+                            <canvas id="canvas-output"></canvas>
+                            <a id="download-link"></a>
+                        </el-row>
+                    </el-col>
+                </el-row>
+
+                <el-row type="flex" class="content-block" justify="center" v-if="isProcessDone && previewRadio === 1">
+                    <el-image
+                            :preview-src-list="[uploadImgSrc]"
+                            :src="uploadImgSrc"
+                            :style="{width: getPreviewSize().originImgWidth + 'px', height: getPreviewSize().originImgHeight + 'px'}">
+                    </el-image>
+                    <el-image
+                            :preview-src-list="[outputImgSrc]"
+                            :src="outputImgSrc"
+                            :style="{width: getPreviewSize().outputImgWidth + 'px', height: getPreviewSize().outputImgHeight + 'px'}">
+                    </el-image>
+                </el-row>
+                <el-row type="flex" class="content-block" justify="center" v-if="isProcessDone && previewRadio === 2">
+                    <el-col style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <el-image
+                                :preview-src-list="[uploadImgSrc]"
+                                :src="uploadImgSrc"
+                                :style="{width: getPreviewSize().originImgWidth + 'px', height: getPreviewSize().originImgHeight + 'px'}">
+                        </el-image>
+                        <el-image
+                                :preview-src-list="[outputImgSrc]"
+                                :src="outputImgSrc"
+                                :style="{width: getPreviewSize().outputImgWidth + 'px', height: getPreviewSize().outputImgHeight + 'px'}">
+                        </el-image>
+                    </el-col>
+                </el-row>
+                <el-row type="flex" justify="center" class="content-block" v-if="isProcessDone && previewRadio === 0">
+                    <div class="preview-overlap-container"
+                         :style="{width: getPreviewSize().outputImgWidth + 'px', height: getPreviewSize().outputImgHeight + 'px'}">
+                        <img
+                                class="preview-overlap-origin"
+                                :src="uploadImgSrc"
+                                :style="{width: getPreviewSize().outputImgWidth + 'px', height: getPreviewSize().outputImgHeight + 'px'}">
+                        <div
+                                class="preview-overlap-output"
+                                :style="{backgroundImage: 'url(' + outputImgSrc + ')', width: getPreviewSize().outputImgWidth * previewOverlapRate / 100 + 'px', height: getPreviewSize().outputImgHeight + 'px'}">
+                        </div>
+                        <div class="preview-overlap-indicator"
+                             :style="{height: getPreviewSize().outputImgHeight + 'px', 'margin-left': getPreviewSize().outputImgWidth * previewOverlapRate / 100 + 'px'}"></div>
+                    </div>
+                    <el-slider
+                            :style="{width: getPreviewSize().outputImgWidth + 'px'}"
+                            class="preview-overlap-fixed-slider"
+                            v-model="previewOverlapRate"
+                            :show-tooltip="false">
+                    </el-slider>
+                </el-row>
+            </el-main>
+        </el-container>
+    </div>
+</script>
+
+<script>
+    let srcInteractedData = null;
+    let dstInteractedData = null;
+    var Module = null;
+
+    let app = new Vue({
+        el: '#app',
+        template: '#form',
+        data: function () {
+            return {
+                activeIndex: '1',
+                scaleRadio: 2,
+                denoiseRadio: 3,
+                previewRadio: 0,
+                previewOverlapRate: 50,
+                uploadImgSrc: '',
+                uploadPreviewWidth: 0,
+                uploadPreviewHeight: 0,
+                uploadPreviewName: '',
+                isProcessing: false,
+                isProcessDone: false,
+                progressRate: 0,
+                procTotalCost: 0,
+                procRemainingTime: 0,
+                progressTip: '',
+                // output param
+                outputPreviewWidth: 0,
+                outputPreviewHeight: 0,
+                outputScale: 0,
+                outputDenoise: 0,
+                windowWidth: 0,
+                outputImgSrc: '',
+                // emscripten
+                wasmModuleLoaded: false,
+            };
+        },
+
+        mounted() {
+            // watch window width
+            this.windowWidth = window.innerWidth;
+            window.addEventListener("resize", () => {
+                this.windowWidth = window.innerWidth;
+            });
+
+            // load preferences
+            let scale = this.getPreference('scale');
+            let denoise = this.getPreference('denoise');
+            let preview = this.getPreference('preview');
+            if (scale) {
+                this.scaleRadio = scale * 1;
+            }
+            if (denoise) {
+                this.denoiseRadio = denoise * 1;
+            }
+            if (preview) {
+                this.previewRadio = preview * 1;
+            }
+
+            // init emscripten
+            Module = {
+                print: (text) => {
+                    console.log(text);
+                    // catch callback =_=
+                    if (text.length > 11 && text.substring(0, 10) === "$CALLBACK$") {
+                        this.wasmCallback(text.substring(11, text.length));
+                    }
+                },
+                printErr: (text) => {
+                    console.error(text);
+                    if ((text + '').includes("memory access out of bounds")) {
+                        this.handleOOM();
+                    } else {
+                        this.$alert('错误信息: ' + text, '处理错误', {
+                            confirmButtonText: '刷新重试',
+                            callback: action => {
+                                window.location.reload();
+                            }
+                        });
+                    }
+                },
+            };
+            this.checkWasmSupportAndLoad();
+        },
+
+        methods: {
+            onScaleOptionChange() {
+                if (this.scaleRadio === 3 && this.denoiseRadio !== 3) {
+                    this.denoiseRadio = 3;
+                    this.onDenoiseOptionChange();
+                }
+                this.savePreference('scale', '' + this.scaleRadio);
+            },
+
+            onDenoiseOptionChange() {
+                this.savePreference('denoise', '' + this.denoiseRadio);
+            },
+
+            onPreviewOptionChange() {
+                this.savePreference('preview', '' + this.previewRadio);
+            },
+
+            savePreference(key, val) {
+                if (localStorage && localStorage.setItem) {
+                    localStorage.setItem(key, val);
+                }
+            },
+
+            getPreference(key, val) {
+                if (localStorage && localStorage.getItem) {
+                    return localStorage.getItem(key, val);
+                }
+                return null;
+            },
+
+            isNotReady() {
+                if (!this.wasmModuleLoaded) {
+                    this.$alert('正在努力加载资源中(约12MB)，请稍后再试', '加载未完成', {
+                        confirmButtonText: '确定',
+                    });
+                    return true;
+                }
+                return false;
+            },
+
+            onUploadChange(file, fileList) {
+                if (this.isNotReady()) {
+                    return;
+                }
+                let canvas = document.getElementById('canvas-upload');
+                let ctx = canvas.getContext('2d');
+                let reader = new FileReader();
+                reader.onload = (event) => {
+                    let img = new Image();
+                    img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        this.uploadPreviewWidth = img.width;
+                        this.uploadPreviewHeight = img.height;
+                        this.uploadPreviewName = file.name;
+                        let uploadImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        this.process(uploadImageData, canvas.width, canvas.height);
+                    }
+                    img.src = event.target.result;
+                    this.uploadImgSrc = event.target.result;
+                }
+                reader.readAsDataURL(file.raw);
+            },
+
+            process(uploadImageData, w, h) {
+                let outputCanvas = document.getElementById('canvas-output');
+                let outputCtx = outputCanvas.getContext('2d');
+                // this.progressTip = '本地CPU努力处理中，请稍后...';
+                this.progressTip = '启动中，预计10秒内完成耗时估算...';
+                this.isProcessing = true;
+                this.isProcessDone = false;
+                this.previewOverlapRate = 50;
+                this.progressRate = 0;
+                this.procTotalCost = 0;
+                this.procRemainingTime = 0;
+                // init output params
+                this.outputScale = this.scaleRadio;
+                this.outputDenoise = this.denoiseRadio;
+                this.outputPreviewWidth = this.uploadPreviewWidth * this.outputScale;
+                this.outputPreviewHeight = this.uploadPreviewHeight * this.outputScale;
+                outputCanvas.width = this.outputPreviewWidth;
+                outputCanvas.height = this.outputPreviewHeight;
+
+                let canvasOutput = document.getElementById('canvas-output');
+                let ctxOutput = canvasOutput.getContext('2d');
+
+                srcInteractedData = _malloc(uploadImageData.data.length);
+                HEAPU8.set(uploadImageData.data, srcInteractedData);
+                let imageDataOutput = ctxOutput.getImageData(0, 0, canvasOutput.width, canvasOutput.height);
+                dstInteractedData = _malloc(imageDataOutput.data.length);
+
+                let retCode = _process_image(0, srcInteractedData, dstInteractedData, w, h, this.outputScale, this.outputDenoise);
+                if (retCode !== 0) {
+                    this.$alert('请稍后再试', '调用冲突', {
+                        confirmButtonText: '确定',
+                    });
+                }
+            },
+
+            getPreviewSize() {
+                if (this.previewRadio === 1) {
+                    this.outputScale = 1;
+                    if (this.uploadPreviewWidth * (this.outputScale + 1) < this.windowWidth) {
+                        return {
+                            originImgWidth: this.uploadPreviewWidth,
+                            originImgHeight: this.uploadPreviewHeight,
+                            outputImgWidth: this.outputPreviewWidth,
+                            outputImgHeight: this.outputPreviewHeight,
+                        }
+                    }
+                    let originImgWidth = Math.floor(this.windowWidth / (this.outputScale + 1));
+                    let originImgHeight = originImgWidth * (this.uploadPreviewHeight / this.uploadPreviewWidth);
+                    let outputImgWidth = originImgWidth * this.outputScale;
+                    let outputImgHeight = outputImgWidth * (this.outputPreviewHeight / this.outputPreviewWidth);
+                    return {
+                        originImgWidth: originImgWidth,
+                        originImgHeight: originImgHeight,
+                        outputImgWidth: outputImgWidth,
+                        outputImgHeight: outputImgHeight,
+                    }
+                } else if (this.previewRadio === 0 || this.previewRadio === 2) {
+                    let originImgWidth = this.uploadPreviewWidth;
+                    let originImgHeight = this.uploadPreviewHeight;
+                    let outputImgWidth = this.outputPreviewWidth;
+                    let outputImgHeight = this.outputPreviewHeight;
+                    if (this.windowWidth < originImgWidth) {
+                        originImgWidth = this.windowWidth;
+                        originImgHeight = originImgWidth * (this.uploadPreviewHeight / this.uploadPreviewWidth);
+                    }
+                    if (this.windowWidth < outputImgWidth) {
+                        outputImgWidth = this.windowWidth;
+                        outputImgHeight = outputImgWidth * (this.outputPreviewHeight / this.outputPreviewWidth);
+                    }
+                    return {
+                        originImgWidth: originImgWidth,
+                        originImgHeight: originImgHeight,
+                        outputImgWidth: outputImgWidth,
+                        outputImgHeight: outputImgHeight,
+                    }
+                }
+                return {};
+            },
+
+            checkWasmSupportAndLoad() {
+                wasmFeatureDetect.simd().then((simdSupported) => {
+                    let hasSIMD = simdSupported;
+                    wasmFeatureDetect.threads().then((threadsSupported) => {
+                        let hasThreads = threadsSupported;
+                        if (!hasSIMD) {
+                            alert("浏览器不支持simd (不支持iOS，Android请单独用Chrome/Firefox等浏览器打开，桌面端请使用最新版本的Chrome或Firefox)");
+                            return;
+                        }
+                        if (!hasThreads) {
+                            alert("浏览器不支持pthread (不支持iOS，Android请单独用Chrome/Firefox等浏览器打开，桌面端请使用最新版本的Chrome或Firefox)");
+                            return;
+                        }
+                        fetch("realcugan-ncnn-webassembly-simd-threads.wasm")
+                            .then((response) => {
+                                response.arrayBuffer();
+                            })
+                            .then((buffer) => {
+                                Module.wasmBinary = buffer;
+                                script = document.createElement('script');
+                                script.src = "realcugan-ncnn-webassembly-simd-threads.js";
+                                script.onload = () => {
+                                    console.log('Emscripten loaded.');
+                                }
+                                document.body.appendChild(script);
+
+                                Module.onRuntimeInitialized = () => {
+                                    console.log("wasm module loaded");
+                                    this.wasmModuleLoaded = true;
+                                }
+                            });
+                    });
+                });
+            },
+
+            onProcessEnd(cost) {
+                let canvasOutput = document.getElementById('canvas-output');
+                let ctxOutput = canvasOutput.getContext('2d');
+                let imageDataOutput = ctxOutput.getImageData(0, 0, canvasOutput.width, canvasOutput.height);
+
+                let result = HEAPU8.subarray(dstInteractedData, dstInteractedData + imageDataOutput.data.length);
+                imageDataOutput.data.set(result);
+                ctxOutput.putImageData(imageDataOutput, 0, 0);
+                console.log("output size: ", result.length);
+                this.outputImgSrc = canvasOutput.toDataURL();
+
+                _free(srcInteractedData);
+                _free(dstInteractedData);
+                srcInteractedData = null;
+                dstInteractedData = null;
+
+                this.isProcessing = false;
+                this.isProcessDone = true;
+
+                let costNum = Math.round(cost / 1000);
+                if (cost < 1000) {
+                    costNum = (cost / 1000).toFixed(2);
+                }
+                this.progressTip = '处理完成！耗时: ' + costNum + '秒';
+                this.$notify({
+                    title: '成功',
+                    message: this.progressTip,
+                    type: 'success'
+                });
+            },
+
+            onProcessProgressChange(totalCost, tileCost, progressRate, remainingTime) {
+                this.progressTip = "本地CPU努力处理中......";
+                this.progressRate = Math.ceil(progressRate * 100);
+                this.procTotalCost = totalCost;
+                this.procRemainingTime = Math.round(remainingTime / 1000);
+            },
+
+            wasmCallback(rawData) {
+                try {
+                    let data = JSON.parse(rawData);
+                    switch (data.eventType) {
+                        case "PROC_END":
+                            this.onProcessEnd(data.cost);
+                            break;
+                        case "PROC_PROGRESS":
+                            this.onProcessProgressChange(data.total_cost, data.tile_cost, data.progress_rate, data.remaining_time);
+                    }
+                } catch (e) {
+                    console.error("wasmCallback parse error:", e);
+                }
+            },
+
+            saveOutput() {
+                let canvasOutput = document.getElementById('canvas-output');
+                let dataURL = canvasOutput.toDataURL("image/png").replace("image/png", "image/octet-stream");
+                var a = document.getElementById("download-link");
+                a.href = dataURL;
+                let filename = "realcugan-output";
+                if (this.uploadPreviewName && this.uploadPreviewName.length > 0) {
+                    filename = this.uploadPreviewName.replace(/\.[^/.]+$/, "");
+                }
+                filename += "-up" + this.outputScale + "x";
+                switch (this.outputDenoise) {
+                    case -1:
+                        filename += "-conservative.png";
+                    case 1:
+                        filename += "-denoise.png";
+                    case 3:
+                        filename += "-denoise3x.png";
+                }
+                a.download = filename;
+                a.click();
+                this.$notify({
+                    title: '保存成功',
+                    message: filename,
+                    type: 'success'
+                });
+            },
+
+            stopProcess() {
+                window.location.reload();
+            },
+
+            handleOOM() {
+                this.$alert('本页面多次处理图片后，触发了浏览器内存限制，请点击刷新按钮重试', '标签页内存受限', {
+                    confirmButtonText: '刷新',
+                    callback: action => {
+                        window.location.reload();
+                    }
+                });
+            },
+
+            runTestCase() {
+                if (this.isNotReady()) {
+                    return;
+                }
+                let filename = 'test-img.jpg';
+                let canvas = document.getElementById('canvas-upload');
+                let ctx = canvas.getContext('2d');
+                let img = new Image();
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    this.uploadPreviewWidth = img.width;
+                    this.uploadPreviewHeight = img.height;
+                    this.uploadPreviewName = filename;
+                    let uploadImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    this.process(uploadImageData, canvas.width, canvas.height);
+                }
+                img.src = filename;
+                this.uploadImgSrc = img.src;
+            }
+        }
+    });
+
+</script>
+
+
+<style>
+    body {
+        margin: 0;
+        border: 0;
+        background-color: #E9EEF3;
+        font-family: PingFang SC, Microsoft YaHei, 微软雅黑, Arial, Hiragino Sans GB, Heiti SC, Droid Sans,
+            WenQuanYi Micro Hei, sans-serif !important;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    }
+
+    .el-header,
+    .el-footer {
+        background-color: #fff;
+        color: #333;
+        text-align: center;
+    }
+
+    .el-main {
+        background-color: #E9EEF3;
+        color: #333;
+        text-align: center;
+    }
+
+    body>.el-container {
+        margin-bottom: 40px;
+    }
+
+    .option-title {
+        width: 5.1em;
+        text-align: left;
+        font-size: 1em;
+    }
+
+    .main-content {
+        background-color: white;
+        padding: 30px;
+        padding-top: 10px;
+    }
+
+    .el-main {
+        padding: 0;
+        padding-top: 20px;
+        padding-bottom: 50px;
+    }
+
+    .preview-overlap-origin {
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+
+    .preview-overlap-output {
+        position: relative;
+        overflow: hidden;
+        z-index: 1;
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-clip: content-box;
+        background-color: #E9EEF3;
+    }
+
+    .preview-overlap-indicator {
+        position: absolute;
+        left: 0;
+        width: 2px;
+        background-color: rgb(103, 194, 58);
+        z-index: 2;
+    }
+
+    .preview-overlap-fixed-slider {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 32px;
+        z-index: 3;
+    }
+
+    .preview-overlap-container {
+        position: relative;
+        display: flex;
+        justify-content: start;
+    }
+
+    .content-block {
+        margin-top: 20px;
+    }
+
+    .el-upload-list {
+        display: none;
+    }
+
+    @media (max-width: 479px) {
+        .main-content {
+            background-color: white;
+            padding: 15px;
+            padding-top: 5px;
+        }
+
+        .el-upload-dragger {
+            width: 310px;
+        }
+    }
+</style>
+
+</html>

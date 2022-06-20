@@ -18,9 +18,9 @@ if (NOT LOCAL_DEBUG)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s FORCE_FILESYSTEM=1  -sALLOW_MEMORY_GROWTH -s EXIT_RUNTIME=1")
     set(CMAKE_EXECUTBLE_LINKER_FLAGS "${CMAKE_EXECUTBLE_LINKER_FLAGS} -s FORCE_FILESYSTEM=1  -sALLOW_MEMORY_GROWTH -s EXIT_RUNTIME=1")
 
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -sEXPORTED_FUNCTIONS=['_process_image','_free'] --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/models@.")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -sEXPORTED_FUNCTIONS=['_process_image','_free'] --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/models@.")
-    set(CMAKE_EXECUTBLE_LINKER_FLAGS "${CMAKE_EXECUTBLE_LINKER_FLAGS} -sEXPORTED_FUNCTIONS=['_process_image','_free'] --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/models@.")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -sEXPORTED_FUNCTIONS=['_process_image','_free'] --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/models@. --use-preload-cache")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -sEXPORTED_FUNCTIONS=['_process_image','_free'] --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/models@. --use-preload-cache")
+    set(CMAKE_EXECUTBLE_LINKER_FLAGS "${CMAKE_EXECUTBLE_LINKER_FLAGS} -sEXPORTED_FUNCTIONS=['_process_image','_free'] --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/models@. --use-preload-cache")
 
     set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 endif()
