@@ -1,6 +1,9 @@
 # RealCUGAN-ncnn-webassembly
 本项目使用Web Assembly技术，基于ncnn运行Real-CUGAN模型。目前只能使用CPU进行计算。
+
 [Real-CUGAN](https://github.com/bilibili/ailab/tree/main/Real-CUGAN) 是一个使用百万级动漫数据进行训练的，结构与Waifu2x兼容的通用动漫图像超分辨率模型。它支持2x\3x\4x倍超分辨率，其中2倍模型支持4种降噪强度与保守修复，3倍/4倍模型支持2种降噪强度与保守修复。
+
+代码实现上深度参考了nihui大佬的[realcugan-ncnn-vulkan](https://github.com/nihui/realcugan-ncnn-vulkan)和[ncnn-webassembly-nanodet](https://github.com/nihui/ncnn-webassembly-nanodet)
 
 # How to build
  1. 安装[emscripten](https://github.com/emscripten-core/emscripten)
