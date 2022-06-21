@@ -5,6 +5,10 @@
 
 代码实现上深度参考了nihui大佬的[realcugan-ncnn-vulkan](https://github.com/nihui/realcugan-ncnn-vulkan)和[ncnn-webassembly-nanodet](https://github.com/nihui/ncnn-webassembly-nanodet)
 
+# 使用
+网站地址： https://real-cugan.animesales.xyz/
+目前不支持iOS，Android请在独立浏览器内打开，PC推荐使用最新版本的Chrome或Firefox。
+
 # How to build
  1. 安装[emscripten](https://github.com/emscripten-core/emscripten)
  ```shell
