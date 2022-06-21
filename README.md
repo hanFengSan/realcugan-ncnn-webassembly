@@ -7,6 +7,7 @@
 
 # 使用
 网站地址： https://real-cugan.animesales.xyz/
+
 目前不支持iOS，Android请在独立浏览器内打开，PC推荐使用最新版本的Chrome或Firefox。
 
 # How to build
