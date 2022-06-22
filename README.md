@@ -9,8 +9,11 @@ The code implementation deeply refers to [realcugan-ncnn-vulkan](https://github.
 
 # Usage
 Website： https://real-cugan.animesales.xyz/
+
 iOS: is not currently supported.
+
 Android: please open in a browser app.
+
 PC/Mac/Linux: recommend using the latest version of Chrome or Firefox.
 
 # How to build
