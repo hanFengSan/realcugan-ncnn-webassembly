@@ -1,26 +1,29 @@
 # RealCUGAN-ncnn-webassembly
-本项目使用Web Assembly技术，基于ncnn运行Real-CUGAN模型。目前只能使用CPU进行计算。
+[中文](https://github.com/hanFengSan/realcugan-ncnn-webassembly/blob/main/README_CN.md)
 
-[Real-CUGAN](https://github.com/bilibili/ailab/tree/main/Real-CUGAN) 是一个使用百万级动漫数据进行训练的，结构与Waifu2x兼容的通用动漫图像超分辨率模型。它支持2x\3x\4x倍超分辨率，其中2倍模型支持4种降噪强度与保守修复，3倍/4倍模型支持2种降噪强度与保守修复。
+This project uses Web Assembly technology to run the Real-CUGAN model based on ncnn. 
 
-代码实现上深度参考了nihui大佬的[realcugan-ncnn-vulkan](https://github.com/nihui/realcugan-ncnn-vulkan)和[ncnn-webassembly-nanodet](https://github.com/nihui/ncnn-webassembly-nanodet)
+[Real-CUGAN](https://github.com/bilibili/ailab/tree/main/Real-CUGAN) is an AI super resolution model for anime images, trained in a million scale anime dataset, using the same architecture as Waifu2x-CUNet. It supports 2x\3x\4x super resolving. For different enhancement strength, now 2x Real-CUGAN supports 5 model weights, 3x/4x Real-CUGAN supports 3 model weights.
 
-# 使用
-网站地址： https://real-cugan.animesales.xyz/
+The code implementation deeply refers to [realcugan-ncnn-vulkan](https://github.com/nihui/realcugan-ncnn-vulkan) and [ncnn-webassembly-nanodet](https://github.com/nihui/ncnn-webassembly-nanodet).
 
-目前不支持iOS，Android请在独立浏览器内打开，PC推荐使用最新版本的Chrome或Firefox。
+# Usage
+Website： https://real-cugan.animesales.xyz/
+iOS: is not currently supported.
+Android: please open in a browser app.
+PC/Mac/Linux: recommend using the latest version of Chrome or Firefox.
 
 # How to build
- 1. 安装[emscripten](https://github.com/emscripten-core/emscripten)
+ 1. Install [emscripten](https://github.com/emscripten-core/emscripten):
  ```shell
  git clone https://github.com/emscripten-core/emsdk.git
 cd emsdk
 ./emsdk install 3.1.13
 ./emsdk activate 3.1.13
 
-source emsdk/emsdk_env.sh # 或者添加到.zshrc等地方
+source emsdk/emsdk_env.sh # or add it to .zshrc etc.
 ```
-2. 构建项目:
+2. build:
 ```shell
 git clone https://github.com/hanfengsan/realcugan-ncnn-webassembly.git
 cd realcugan-ncnn-webassembly
@@ -30,4 +33,4 @@ sh build.sh
 
 go run local_server.go
 ```
-然后打开: http://localhost:8000
+open in brower: http://localhost:8000
